@@ -57,11 +57,8 @@ if (title && !reduce) {
     })(title);
 }
 
-/* 5. Section titles reveal once as they enter */
-const rvObs = new IntersectionObserver((es, o) => es.forEach(e => {
-    if (e.isIntersecting) { e.target.classList.add('in'); o.unobserve(e.target); }
-}), { threshold: 0.3 });
-if (!reduce) $$('.section-title').forEach(t => { t.classList.add('rv'); rvObs.observe(t); });
+/* 5. Section headings stay readable on every viewport. Their parent sections
+   use the shared scroll-reveal system below, avoiding a second competing observer. */
 
 /* 6. FAQ accordion (keyboard accessible) */
 const faqs = $$('.faq-item');
@@ -107,27 +104,67 @@ addEventListener('resize', () => {
 }, { passive: true });
 
 
-/* Professional reveal-on-scroll: stagger related cards, animate once, and keep fallbacks visible. */
-if (!reduce && 'IntersectionObserver' in window) {
+/* Reliable reveal-on-scroll for desktop, laptop, tablet and mobile. */
+{
     const revealTargets = $$('.section-header, .service-card, .industry-card, .feature-box, .process-card, .pricing-card, .about-box, .contact-info-card, .contact-form, .faq-item');
-    revealTargets.forEach((el, index) => {
-        el.classList.add('scroll-reveal');
-        // Stagger each local group, not the entire page, so later sections never wait too long.
-        const siblings = [...(el.parentElement?.children || [])].filter(node => node.matches('.scroll-reveal'));
-        const position = Math.max(0, siblings.indexOf(el));
-        el.style.setProperty('--reveal-delay', `${Math.min(position, 4) * 65}ms`);
-        if (el.matches('.contact-info-card')) el.classList.add('reveal-left');
-    });
-    const revealObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (!entry.isIntersecting) return;
-            entry.target.classList.add('is-visible');
-            observer.unobserve(entry.target);
+    const revealNow = el => {
+        if (!el.classList.contains('is-visible')) el.classList.add('is-visible');
+    };
+
+    if (!reduce) {
+        revealTargets.forEach(el => {
+            el.classList.add('scroll-reveal');
+            const siblings = [...(el.parentElement?.children || [])].filter(node => node.matches('.scroll-reveal'));
+            const position = Math.max(0, siblings.indexOf(el));
+            el.style.setProperty('--reveal-delay', `${Math.min(position, 3) * 55}ms`);
+            if (el.matches('.contact-info-card')) el.classList.add('reveal-left');
         });
-    }, { threshold: 0.08, rootMargin: '0px 0px -32px 0px' });
-    revealTargets.forEach(el => revealObserver.observe(el));
-} else {
-    $$('.scroll-reveal').forEach(el => el.classList.add('is-visible'));
+
+        // IntersectionObserver is the primary path. The scroll fallback also covers
+        // browser extensions, older engines, zoomed desktop windows, and late layout shifts.
+        let observer = null;
+        if ('IntersectionObserver' in window) {
+            observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        revealNow(entry.target);
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0, rootMargin: '0px 0px 80px 0px' });
+            revealTargets.forEach(el => observer.observe(el));
+        }
+
+        let ticking = false;
+        const revealInViewport = () => {
+            const viewport = window.innerHeight || document.documentElement.clientHeight;
+            revealTargets.forEach(el => {
+                if (el.classList.contains('is-visible')) return;
+                const rect = el.getBoundingClientRect();
+                if (rect.top < viewport * 0.92 && rect.bottom > 0) {
+                    revealNow(el);
+                    if (observer) observer.unobserve(el);
+                }
+            });
+            ticking = false;
+        };
+        const scheduleReveal = () => {
+            if (!ticking) {
+                ticking = true;
+                requestAnimationFrame(revealInViewport);
+            }
+        };
+        addEventListener('scroll', scheduleReveal, { passive: true });
+        addEventListener('resize', scheduleReveal, { passive: true });
+        addEventListener('load', scheduleReveal, { once: true });
+        addEventListener('pageshow', scheduleReveal);
+        // Recheck after fonts/images and responsive layout have settled.
+        scheduleReveal();
+        requestAnimationFrame(() => requestAnimationFrame(scheduleReveal));
+    } else {
+        // Honour operating-system reduced-motion preferences and keep all content visible.
+        revealTargets.forEach(revealNow);
+    }
 }
 
 /* Anchor navigation: account for the fixed header and close the mobile menu reliably. */
