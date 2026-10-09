@@ -452,7 +452,6 @@ html { scroll-behavior: smooth; scroll-padding-top: 5.5rem; }
 .scroll-reveal.is-visible { opacity: 1; transform: translate3d(0, 0, 0); }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .scroll-reveal, .scroll-reveal.is-visible { opacity: 1; transform: none; transition: none; }
 }
 
 
@@ -499,7 +498,7 @@ body { -webkit-font-smoothing: antialiased; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
-  .scroll-reveal, .scroll-reveal.is-visible, .hero-content, .hero-visual-card { opacity: 1; transform: none; filter: none; }
+  .hero-content, .hero-visual-card { opacity: 1; transform: none; filter: none; }
 }
 
 
@@ -536,7 +535,6 @@ body { -webkit-font-smoothing: antialiased; }
   .scroll-reveal.reveal-left.is-visible { transform: translate3d(0, 0, 0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .scroll-reveal, .scroll-reveal.is-visible { opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important; }
 }
 
 
@@ -575,8 +573,18 @@ body { -webkit-font-smoothing: antialiased; }
   .section-header .section-title,
   .section-header .section-desc { opacity: 1; }
 }
+
+
+/* ===== FINAL FIX: reveal works on every device ===== */
+/* Headings & about box: always visible, only a soft slide-up (never opacity 0) */
+.scroll-reveal.reveal-soft { opacity: 1 !important; filter: none !important; }
+.section-title, .section-subtitle, .section-desc { opacity: 1 !important; visibility: visible !important; }
+
+/* "Reduce motion" (Windows/macOS/Android animation switch) -> gentle fade only, no movement.
+   Without this, laptops with animations turned off in the OS saw NO animation at all. */
 @media (prefers-reduced-motion: reduce) {
-  .scroll-reveal, .scroll-reveal.is-visible {
-    opacity: 1 !important; transform: none !important; filter: none !important; transition: none !important;
-  }
+  .scroll-reveal { opacity: 0; transform: none !important; filter: none !important;
+                   transition: opacity .7s ease !important; transition-delay: var(--reveal-delay, 0ms) !important; }
+  .scroll-reveal.is-visible { opacity: 1; }
+  .scroll-reveal.reveal-soft { opacity: 1 !important; }
 }

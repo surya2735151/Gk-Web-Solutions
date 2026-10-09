@@ -111,9 +111,11 @@ addEventListener('resize', () => {
         if (!el.classList.contains('is-visible')) el.classList.add('is-visible');
     };
 
-    if (!reduce) {
+    if (true) {
         revealTargets.forEach(el => {
             el.classList.add('scroll-reveal');
+            // Headings must never be invisible: they only slide up (opacity stays 1).
+            if (el.matches('.section-header, .about-box')) el.classList.add('reveal-soft');
             const siblings = [...(el.parentElement?.children || [])].filter(node => node.matches('.scroll-reveal'));
             const position = Math.max(0, siblings.indexOf(el));
             el.style.setProperty('--reveal-delay', `${Math.min(position, 3) * 55}ms`);
@@ -159,11 +161,12 @@ addEventListener('resize', () => {
         addEventListener('load', scheduleReveal, { once: true });
         addEventListener('pageshow', scheduleReveal);
         // Recheck after fonts/images and responsive layout have settled.
+        setTimeout(revealInViewport, 3000);          // failsafe
+        setTimeout(() => revealTargets.forEach(el => {  // last resort: never leave content hidden
+            if (el.getBoundingClientRect().top < (innerHeight || 800)) revealNow(el);
+        }), 6000);
         scheduleReveal();
         requestAnimationFrame(() => requestAnimationFrame(scheduleReveal));
-    } else {
-        // Honour operating-system reduced-motion preferences and keep all content visible.
-        revealTargets.forEach(revealNow);
     }
 }
 
